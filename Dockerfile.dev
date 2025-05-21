@@ -5,7 +5,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=off \
     PIP_DISABLE_PIP_VERSION_CHECK=on \
-    PIP_DEFAULT_TIMEOUT=100
+    PIP_DEFAULT_TIMEOUT=100 \
+    WORKSPACE_DIR=/workspace
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -28,8 +29,11 @@ COPY . .
 RUN pip install --upgrade pip && \
     pip install -e ".[dev]"
 
+# Create a clean workspace directory
+RUN mkdir -p ${WORKSPACE_DIR}
+
 # Expose the port the app runs on
 EXPOSE 1818
 
 # Command to run the application
-CMD ["ra-aid", "--server", "--server-port", "1818", "--server-host", "0.0.0.0"]
+CMD ["sh", "-c", "cd ${WORKSPACE_DIR} && ra-aid --server --server-port 1818 --server-host 0.0.0.0"]

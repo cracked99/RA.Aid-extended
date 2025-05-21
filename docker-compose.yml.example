@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  ra-aid:
+    image: aichristianson/ra-aid:latest
+    # Alternatively, you can build from source
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile.dev
+    volumes:
+      # Mount your project directory
+      - ./:/workspace:Z
+    ports:
+      # Map the server port to host
+      - "1818:1818"
+    environment:
+      # Set environment variables here
+      - PYTHONPATH=/workspace
+      # Add your API keys here (or use .env file)
+      # - ANTHROPIC_API_KEY=your_api_key
+      # - OPENAI_API_KEY=your_api_key
+    env_file:
+      # Load environment variables from .env file
+      - .env
+    # Use this working directory inside the container
+    working_dir: /workspace
+    # Command to run RA.Aid in server mode
+    command: ra-aid --server --server-port 1818 --server-host 0.0.0.0
+    # Keep the container running
+    tty: true

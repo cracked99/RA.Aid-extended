@@ -259,17 +259,50 @@ def ask_expert(question: str) -> str:
 
     # Ensure all elements in query_parts are strings before joining
     query_parts = [str(part) for part in query_parts]
-    
+
     # Join all parts
     full_query = "\n".join(query_parts)
 
-    # Get response using full query
-    response = get_model().invoke(full_query)
-    
-    # Get the content from the response
-    content = response.content
-    logger.debug(f"Expert response content type: {type(content).__name__}")
-    
+    try:
+        # Get response using full query
+        response = get_model().invoke(full_query)
+
+        # Get the content from the response
+        content = response.content
+        logger.debug(f"Expert response content type: {type(content).__name__}")
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Error invoking expert model: {error_msg}")
+
+        # Handle specific model errors
+        if "temperature may only be set to 1 when thinking is enabled" in error_msg:
+            console_panel(
+                "Expert query failed: Anthropic models require temperature=1 when thinking is enabled.\n"
+                "Please try again with a different model or provider.",
+                title="Tool Error",
+                border_style="red"
+            )
+            return "Expert query failed due to model configuration issues. Please try again with a different model or provider."
+
+        # Handle OpenRouter errors
+        if "openrouter" in error_msg.lower():
+            config_repo = get_config_repository()
+            provider = config_repo.get("expert_provider") or config_repo.get("provider")
+            model_name = config_repo.get("expert_model") or config_repo.get("model")
+
+            console_panel(
+                f"Expert query failed with OpenRouter model: {model_name}\n"
+                f"Error: {error_msg}\n"
+                "OpenRouter models may have different capabilities than native models.\n"
+                "Try using a different model or provider.",
+                title="Tool Error",
+                border_style="red"
+            )
+            return "Expert query failed with OpenRouter model. Please try again with a different model or provider."
+
+        # Re-raise other errors
+        raise
+
     # Check if model supports think tags
     config_repo = get_config_repository()
     provider = config_repo.get("expert_provider") or config_repo.get("provider")
@@ -277,11 +310,11 @@ def ask_expert(question: str) -> str:
     model_config = models_params.get(provider, {}).get(model_name, {})
     supports_think_tag = model_config.get("supports_think_tag", False)
     supports_thinking = model_config.get("supports_thinking", False)
-    
+
     logger.debug(f"Expert model: {provider}/{model_name}")
     logger.debug(f"Model supports think tag: {supports_think_tag}")
     logger.debug(f"Model supports thinking: {supports_thinking}")
-    
+
     # Process thinking content using the common processing function
     try:
         # Use the process_thinking_content function to handle both string and list responses
@@ -293,11 +326,11 @@ def ask_expert(question: str) -> str:
             panel_style="yellow",
             logger=logger
         )
-        
+
     except Exception as e:
         logger.error(f"Exception during content processing: {str(e)}")
         raise
-    
+
     # Record expert response in trajectory
     try:
         trajectory_repo = get_trajectory_repository()

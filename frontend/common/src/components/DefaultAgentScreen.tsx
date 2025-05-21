@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { PanelLeft, Plus, RefreshCw, RefreshCwOff } from 'lucide-react'; // Added RefreshCw, RefreshCwOff
+import { PanelLeft, Plus, RefreshCw, RefreshCwOff, Settings } from 'lucide-react'; // Added Settings icon
 import {
   Button,
   Layout,
@@ -10,6 +10,8 @@ import { SessionDrawer } from './SessionDrawer';
 import { SessionList } from './SessionList';
 import { TrajectoryPanel } from './TrajectoryPanel';
 import { InputSection } from './InputSection';
+import { SettingsModal } from './SettingsModal'; // Import SettingsModal
+import { TerminalPromptModal, useTerminalPrompt } from './TerminalPrompt'; // Import TerminalPrompt
 import { useSessionStore, useClientConfigStore, useTrajectoryStore } from '../store';
 import { BackendTrajectory, safeBackendToTrajectory } from '../models/trajectory';
 import { WebSocketConnection, WebSocketConfig } from '../websocket/connection';
@@ -95,6 +97,19 @@ export const DefaultAgentScreen: React.FC = () => {
   // State for drawer open/close
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
+  // State for settings modal
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // State for terminal prompt
+  const [isTerminalPromptOpen, setIsTerminalPromptOpen] = useState(false);
+  const [terminalPrompt, setTerminalPrompt] = useState<{
+    text: string;
+    options: Array<{ value: string; label: string }>;
+  } | null>(null);
+
+  // Terminal prompt hook
+  const { sendResponse } = useTerminalPrompt();
+
   // State for theme (dark is default)
   const [isDarkTheme, setIsDarkTheme] = useState(true);
 
@@ -148,7 +163,7 @@ export const DefaultAgentScreen: React.FC = () => {
       } else {
          console.warn("[DefaultAgentScreen] Received invalid session_update payload:", sessionPayload);
       }
-    } else if (messageData.type === 'session_details_update' && messageData.payload) { // <-- Handle new type
+    } else if (messageData.type === 'session_details_update' && messageData.payload) {
       console.log('[DefaultAgentScreen] Received session_details_update message:', messageData.payload);
       // Payload should be a BackendSession object
       const backendSession = messageData.payload; // Assuming payload is directly the BackendSession
@@ -160,12 +175,22 @@ export const DefaultAgentScreen: React.FC = () => {
       } else {
           console.warn("[DefaultAgentScreen] Received invalid session_details_update payload or conversion failed:", backendSession);
       }
+    } else if (messageData.type === 'terminal_prompt' && messageData.payload) {
+      console.log('[DefaultAgentScreen] Received terminal_prompt message:', messageData.payload);
+      const promptPayload = messageData.payload as {
+        text: string;
+        options: Array<{ value: string; label: string }>;
+      };
+
+      // Set the terminal prompt
+      setTerminalPrompt(promptPayload);
+      setIsTerminalPromptOpen(true);
     } else if (messageData.type) {
        console.log(`[DefaultAgentScreen] Received unhandled message type: ${messageData.type}`);
     } else {
         console.warn('[DefaultAgentScreen] Received message without a type:', messageData);
     }
-  }, [addOrUpdateTrajectory, updateSessionStatus, updateSessionDetails]); // <-- Add updateSessionDetails to dependencies
+  }, [addOrUpdateTrajectory, updateSessionStatus, updateSessionDetails]);
 
   // Establish WebSocket connection on mount
   useEffect(() => {
@@ -363,18 +388,28 @@ export const DefaultAgentScreen: React.FC = () => {
           className="h-8"
         />
       </div>
-      <div className="flex-initial ml-auto flex items-center space-x-2"> {/* Added flex and space-x-2 */}
-        {/* NEW: Auto-scroll Toggle Button - Refactored */}
+      <div className="flex-initial ml-auto flex items-center space-x-2">
+        {/* Settings Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Open settings"
+          onClick={() => setIsSettingsOpen(true)}
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
+
+        {/* Auto-scroll Toggle Button */}
         <Button
           variant="ghost"
           size="icon"
           aria-label="Toggle auto-scroll"
           onClick={handleToggleAutoScroll}
         >
-          {scrollIcon} {/* Use the variable here */}
+          {scrollIcon}
         </Button>
 
-        {/* Existing: Theme Toggle Button */}
+        {/* Theme Toggle Button */}
         <Button
           variant="ghost"
           size="icon"
@@ -533,6 +568,27 @@ export const DefaultAgentScreen: React.FC = () => {
         {mainContent}
       </Layout>
       <FloatingActionButton onClick={() => setIsDrawerOpen(true)} />
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
+
+      {/* Terminal Prompt Modal */}
+      <TerminalPromptModal
+        isOpen={isTerminalPromptOpen}
+        prompt={terminalPrompt}
+        onResponse={async (response) => {
+          await sendResponse(response);
+          setIsTerminalPromptOpen(false);
+          setTerminalPrompt(null);
+        }}
+        onClose={() => {
+          setIsTerminalPromptOpen(false);
+          setTerminalPrompt(null);
+        }}
+      />
     </>
   );
 };

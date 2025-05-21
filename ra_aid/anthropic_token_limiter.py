@@ -54,9 +54,16 @@ def convert_message_to_litellm_format(message: BaseMessage) -> Dict:
         Dict in litellm format
     """
     message_dict = message_to_dict(message)
+    content = message_dict["data"]["content"]
+
+    # Handle different content types
+    if isinstance(content, dict) or isinstance(content, list):
+        # For complex content types, convert to string to avoid errors
+        content = str(content)
+
     return {
         "role": message_dict["type"],
-        "content": message_dict["data"]["content"],
+        "content": content,
     }
 
 

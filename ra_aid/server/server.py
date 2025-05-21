@@ -31,8 +31,11 @@ if project_root not in sys.path:
 
 from ra_aid.server.api_v1_sessions import router as sessions_router
 from ra_aid.server.api_v1_spawn_agent import router as spawn_agent_router
+from ra_aid.server.api_v1_settings import router as settings_router
+from ra_aid.server.api_v1_terminal import router as terminal_router
 from ra_aid.server.connection_manager import ConnectionManager
 from ra_aid.server.broadcast_sender import set_broadcast_queue
+from ra_aid.terminal import start_prompt_handler
 
 _app_instance: FastAPI = None
 
@@ -87,6 +90,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         broadcast_consumer(app.state.broadcast_queue, app.state.connection_manager)
     )
 
+    # Start the terminal prompt handler
+    start_prompt_handler()
+    logger.info("Terminal prompt handler started")
+
     yield
 
     logger.info("Application shutdown: Cleaning up resources.")
@@ -122,6 +129,8 @@ app.add_middleware(
 
 app.include_router(sessions_router)
 app.include_router(spawn_agent_router)
+app.include_router(settings_router)
+app.include_router(terminal_router)
 
 CURRENT_DIR = Path(__file__).parent
 PREBUILT_DIR = CURRENT_DIR / "prebuilt"

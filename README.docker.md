@@ -73,6 +73,30 @@ The frontend will be available at: http://localhost:5173
 
 The container setup mounts your local directory into the container, so any changes you make to the code will be reflected in the running application.
 
+### Creating Fresh Projects
+
+The Docker setup includes a dedicated workspace volume that allows you to create fresh projects without detecting existing files. When you access the RA.Aid web interface, you'll be able to create a new project from scratch.
+
+To reset the workspace and start with a completely fresh project:
+
+```bash
+# Run the reset script
+./reset-workspace.sh
+
+# Or manually:
+# If using Docker
+docker-compose down
+docker volume rm ra-aid-workspace-default
+docker-compose up -d
+
+# If using Podman
+podman-compose down
+podman volume rm ra-aid-workspace-default
+podman-compose up -d
+```
+
+This will give you a clean workspace where you can create a new project from scratch.
+
 ### Python Code Changes
 
 For Python code changes, you may need to restart the server:

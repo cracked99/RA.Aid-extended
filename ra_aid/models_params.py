@@ -308,6 +308,57 @@ models_params = {
         },
     },
     "openrouter": {
+        # Free models
+        "meta-llama/llama-3-8b-instruct:free": {
+            "token_limit": 8192,
+            "default_temperature": 0.7,
+            "supports_temperature": True,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "max_tokens": 4096,
+            "reasoning_assist_default": False,
+            "is_free": True,
+            "default_backend": AgentBackendType.CIAYN,
+        },
+        "mistralai/mistral-7b-instruct-v0.2:free": {
+            "token_limit": 8192,
+            "default_temperature": 0.7,
+            "supports_temperature": True,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "max_tokens": 4096,
+            "reasoning_assist_default": False,
+            "is_free": True,
+            "default_backend": AgentBackendType.CIAYN,
+        },
+        "google/gemma-7b-it:free": {
+            "token_limit": 8192,
+            "default_temperature": 0.7,
+            "supports_temperature": True,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "max_tokens": 4096,
+            "reasoning_assist_default": False,
+            "is_free": True,
+            "default_backend": AgentBackendType.CIAYN,
+        },
+
+        # Cost-effective models
+        "meta-llama/llama-3-70b-instruct": {
+            "token_limit": 8192,
+            "default_temperature": 0.7,
+            "supports_temperature": True,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "max_tokens": 4096,
+            "reasoning_assist_default": False,
+            "default_backend": AgentBackendType.CIAYN,
+        },
+        "mistralai/mistral-large-2411": {
+            "token_limit": 32768,
+            "default_temperature": 0.7,
+            "supports_temperature": True,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "max_tokens": 16384,
+            "reasoning_assist_default": False,
+            "default_backend": AgentBackendType.CIAYN,
+        },
         "qwen/qwen-2.5-coder-32b-instruct": {
             "token_limit": 131072,
             "default_temperature": 0.4,
@@ -315,7 +366,19 @@ models_params = {
             "latency_coefficient": DEFAULT_BASE_LATENCY,
             "max_tokens": 32000,
             "reasoning_assist_default": False,
+            "default_backend": AgentBackendType.CIAYN,
         },
+        "deepseek/deepseek-r1": {
+            "token_limit": 163840,
+            "default_temperature": 0.7,
+            "supports_temperature": True,
+            "latency_coefficient": DEFAULT_BASE_LATENCY,
+            "max_tokens": 32000,
+            "reasoning_assist_default": False,
+            "default_backend": AgentBackendType.CIAYN,
+        },
+
+        # Other models
         "google/gemini-2.5-pro-preview-03-25": {
             "token_limit": 1048576,
             "max_tokens": 1048576, # Match token_limit as per gemini provider entry

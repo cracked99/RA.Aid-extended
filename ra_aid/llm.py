@@ -5,7 +5,8 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
 from langchain_deepseek import ChatDeepSeek
 from langchain_fireworks import ChatFireworks
-from langchain_google_genai import ChatGoogleGenerativeAI
+# Temporarily commenting out problematic import
+# from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 from openai import OpenAI
@@ -441,7 +442,12 @@ def create_llm_client(
 
     # Handle temperature settings
     if is_expert:
-        temp_kwargs = {"temperature": 0} if supports_temperature else {}
+        if provider == "openrouter":
+            # For OpenRouter expert mode, use a low but non-zero temperature
+            temp_kwargs = {"temperature": 0.1} if supports_temperature else {}
+        else:
+            # For other providers in expert mode, use temperature 0
+            temp_kwargs = {"temperature": 0} if supports_temperature else {}
     elif supports_temperature:
         if temperature is None:
             # Use the model's default temperature from models_params
@@ -493,6 +499,11 @@ def create_llm_client(
     if supports_thinking:
         thinking_kwargs = {"thinking": {"type": "enabled", "budget_tokens": 12000}}
 
+        # For Anthropic models with thinking enabled, temperature must be set to 1
+        if provider == "anthropic" and "temperature" in temp_kwargs:
+            temp_kwargs["temperature"] = 1.0
+            logger.info("Setting temperature to 1.0 for Anthropic model with thinking enabled")
+
     if provider == "deepseek":
         return create_deepseek_client(
             model_name=model_name,
@@ -503,9 +514,27 @@ def create_llm_client(
             is_expert=is_expert,
         )
     elif provider == "openrouter":
+        # Ensure we have a valid API key
+        api_key = config.get("api_key")
+        if not api_key:
+            # Try to get the API key from the environment directly
+            api_key = os.environ.get("OPENROUTER_API_KEY")
+            if not api_key:
+                raise ValueError("Missing required environment variable for provider: openrouter")
+
+        logger.info(f"Using OpenRouter with API key: {api_key[:5]}...{api_key[-5:]}")
+
+        # Check if we're using a free model
+        is_free_model = ":free" in model_name
+        if is_free_model:
+            logger.info(f"Using free OpenRouter model: {model_name}")
+            logger.warning("Even free models require credits on OpenRouter. Make sure your account has credits.")
+        else:
+            logger.info(f"Using paid OpenRouter model: {model_name}")
+
         return create_openrouter_client(
             model_name=model_name,
-            api_key=config.get("api_key"),
+            api_key=api_key,
             **temp_kwargs,
             **thinking_kwargs,
             is_expert=is_expert,
@@ -576,19 +605,8 @@ def create_llm_client(
             **thinking_kwargs,
         )
     elif provider == "gemini":
-        return ChatGoogleGenerativeAI(
-            api_key=config.get("api_key"),
-            model=model_name,
-            metadata={"model_name": model_name, "provider": "gemini"},
-            timeout=int(
-                get_env_var(name="LLM_REQUEST_TIMEOUT", default=LLM_REQUEST_TIMEOUT)
-            ),
-            max_retries=int(
-                get_env_var(name="LLM_MAX_RETRIES", default=LLM_MAX_RETRIES)
-            ),
-            **temp_kwargs,
-            **thinking_kwargs,
-        )
+        # Temporarily disabled due to compatibility issues
+        raise ValueError("Gemini provider is temporarily disabled due to compatibility issues with Python 3.10")
     elif provider == "ollama":
 
         return create_ollama_client(
@@ -628,7 +646,7 @@ def create_llm_client(
 
 
 def initialize_llm(
-    provider: str, model_name: str, temperature: float | None = None
+    provider: str, model_name: str, temperature: Optional[float] = None
 ) -> BaseChatModel:
     """Initialize a language model client based on the specified provider and model."""
     return create_llm_client(provider, model_name, temperature, is_expert=False)

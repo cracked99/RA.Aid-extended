@@ -13,6 +13,14 @@ def set_broadcast_queue(queue_instance: queue.Queue):
     _broadcast_queue = queue_instance
     logger.info("Broadcast queue set in broadcast_sender.")
 
+def get_broadcast_queue() -> queue.Queue | None:
+    """Gets the global broadcast queue instance for this module.
+
+    Returns:
+        The broadcast queue instance, or None if not initialized
+    """
+    return _broadcast_queue
+
 def send_broadcast(message: Any):
     """Puts a message onto the WebSocket broadcast queue.
 

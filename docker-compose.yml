@@ -8,6 +8,8 @@ services:
     volumes:
       # Mount the source code for development
       - ./:/app:Z
+      # Create a named volume for the workspace directory
+      - ra-aid-workspace:/workspace:Z
     ports:
       # Map the server port to host
       - "1818:1818"
@@ -17,6 +19,8 @@ services:
       # Add your API keys here (or use .env file)
       # - ANTHROPIC_API_KEY=your_api_key
       # - OPENAI_API_KEY=your_api_key
+      # Set project state directory to the workspace
+      - PROJECT_STATE_DIR=/workspace
     env_file:
       # Load environment variables from .env file
       - .env
@@ -36,3 +40,9 @@ services:
       - VITE_BACKEND_PORT=1818
     depends_on:
       - ra-aid
+
+volumes:
+  # Named volume for the workspace directory
+  ra-aid-workspace:
+    # This ensures a fresh volume for each new container
+    name: "ra-aid-workspace-${COMPOSE_PROJECT_NAME:-default}"

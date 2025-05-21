@@ -462,7 +462,22 @@ YOU MUST FOLLOW THE EXPERT'S GUIDANCE OR ELSE BE TERMINATED!
         logger.info(f"[{thread_id}] Research agent interrupted.")
         raise
     except Exception as e:
-        logger.error(f"[{thread_id}] Research agent failed: {str(e)}", exc_info=True)
+        error_msg = str(e)
+        logger.error(f"[{thread_id}] Research agent failed: {error_msg}", exc_info=True)
+
+        # Handle specific errors
+        if "402" in error_msg and "Insufficient credits" in error_msg:
+            from ra_aid.console.formatting import console_panel
+
+            console_panel(
+                "OpenRouter Error: Insufficient credits\n\n"
+                "Even 'free' models on OpenRouter require credits. Please add credits to your account at:\n"
+                "https://openrouter.ai/settings/credits\n\n"
+                "Or try a different provider.",
+                title="OpenRouter Credits Required",
+                border_style="red"
+            )
+
         raise
 
 
@@ -584,5 +599,20 @@ def run_web_research_agent(
         logger.info(f"[{thread_id}] Web research agent interrupted.")
         raise
     except Exception as e:
-        logger.error(f"[{thread_id}] Web research agent failed: {str(e)}", exc_info=True)
+        error_msg = str(e)
+        logger.error(f"[{thread_id}] Web research agent failed: {error_msg}", exc_info=True)
+
+        # Handle specific errors
+        if "402" in error_msg and "Insufficient credits" in error_msg:
+            from ra_aid.console.formatting import console_panel
+
+            console_panel(
+                "OpenRouter Error: Insufficient credits\n\n"
+                "Even 'free' models on OpenRouter require credits. Please add credits to your account at:\n"
+                "https://openrouter.ai/settings/credits\n\n"
+                "Or try a different provider.",
+                title="OpenRouter Credits Required",
+                border_style="red"
+            )
+
         raise
