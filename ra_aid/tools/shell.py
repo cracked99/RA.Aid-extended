@@ -72,13 +72,22 @@ def run_shell_command(
     # Record tool execution in trajectory
     trajectory_repo = get_trajectory_repository()
     human_input_id = get_human_input_repository().get_most_recent_id()
+
+    # Include cowboy_mode status in the step_data
+    step_data = {
+        "command": command,
+        "display_title": "Shell Command",
+        "cowboy_mode": cowboy_mode,
+    }
+
+    # If not in cowboy mode, include the prompt text in step_data
+    if not cowboy_mode:
+        step_data["prompt"] = "Execute this command? (y=yes, n=no, c=enable cowboy mode for session)"
+
     trajectory_repo.create(
         tool_name="run_shell_command",
         tool_parameters={"command": command, "timeout": timeout},
-        step_data={
-            "command": command,
-            "display_title": "Shell Command",
-        },
+        step_data=step_data,
         record_type="tool_execution",
         human_input_id=human_input_id
     )
@@ -96,6 +105,22 @@ def run_shell_command(
             show_default=True,
         )
 
+        # Update trajectory with the user's response
+        trajectory_repo = get_trajectory_repository()
+        human_input_id = get_human_input_repository().get_most_recent_id()
+
+        # Add the user's response to the step_data
+        step_data["user_response"] = response
+
+        # Update the trajectory record with the user's response
+        trajectory_repo.create(
+            tool_name="run_shell_command",
+            tool_parameters={"command": command, "timeout": timeout},
+            step_data=step_data,
+            record_type="tool_execution",
+            human_input_id=human_input_id
+        )
+
         if response == "n":
             print()
             return {
@@ -108,6 +133,16 @@ def run_shell_command(
             console.print("")
             console.print(" " + get_cowboy_message())
             console.print("")
+
+            # Update trajectory with cowboy mode enabled
+            step_data["cowboy_mode"] = True
+            trajectory_repo.create(
+                tool_name="run_shell_command",
+                tool_parameters={"command": command, "timeout": timeout},
+                step_data=step_data,
+                record_type="tool_execution",
+                human_input_id=human_input_id
+            )
 
     try:
         print()
@@ -143,6 +178,6 @@ def run_shell_command(
             error_type=type(e).__name__,
             human_input_id=human_input_id
         )
-        
+
         console_panel(str(e), title="❌ Error", border_style="red")
         return {"output": str(e), "return_code": 1, "success": False}

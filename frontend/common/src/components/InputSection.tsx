@@ -24,6 +24,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
   const [message, setMessage] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resetWorkspace, setResetWorkspace] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null); // Ref for the textarea
 
   // Get session store state and actions for new session handling
@@ -86,8 +87,8 @@ export const InputSection: React.FC<InputSectionProps> = ({
       if (isNewSession && newSession) {
         // For new sessions, update the message in the store and submit
         updateNewSessionMessage(message);
-        // Default to regular mode (not research-only)
-        await submitNewSession(false);
+        // Default to regular mode (not research-only), pass resetWorkspace
+        await submitNewSession(false, resetWorkspace);
         // No need to clear the input here as the component will be unmounted
         // when the newSession state is cleared in the store
       } else if (onSubmit) {
@@ -118,8 +119,8 @@ export const InputSection: React.FC<InputSectionProps> = ({
 
     try {
       updateNewSessionMessage(message);
-      // Set research-only mode to true
-      await submitNewSession(true);
+      // Set research-only mode to true, pass resetWorkspace
+      await submitNewSession(true, resetWorkspace);
     } catch (error) {
       console.error("Error submitting research-only message:", error);
     }
@@ -192,15 +193,41 @@ export const InputSection: React.FC<InputSectionProps> = ({
               disabled={isSubmitting}
             />
             {isNewSession ? (
-              <div className="flex items-center justify-end space-x-2 px-3 py-2 border-t border-border/30">{/* Changed justify-end */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleResearchOnlySubmit}
-                  disabled={!message.trim() || isSubmitting}
-                  className="text-xs h-8"
-                >
+              <div className="flex items-center justify-between px-3 py-2 border-t border-border/30">
+                <div className="flex items-center group relative">
+                  <input
+                    type="checkbox"
+                    id="reset-workspace"
+                    checked={resetWorkspace}
+                    onChange={(e) => setResetWorkspace(e.target.checked)}
+                    className="mr-2 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    disabled={isSubmitting}
+                  />
+                  <label
+                    htmlFor="reset-workspace"
+                    className={`text-xs cursor-pointer transition-colors ${
+                      resetWorkspace
+                        ? 'text-primary font-medium'
+                        : 'text-muted-foreground'
+                    }`}
+                  >
+                    Reset workspace {resetWorkspace && '✓'}
+                  </label>
+                  <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-50">
+                    <div className="bg-black text-white text-xs rounded py-1 px-2 max-w-xs shadow-lg">
+                      Clears all files from the workspace directory before starting the agent, creating a fresh environment for new projects. Also enables cowboy mode to automatically approve commands.
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleResearchOnlySubmit}
+                    disabled={!message.trim() || isSubmitting}
+                    className="text-xs h-8"
+                  >
                   {isSubmitting && newSession?.isSubmitting ? (
                     <span className="flex items-center">
                       <span className="h-3 w-3 mr-1 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -256,6 +283,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
                     </span>
                   )}
                 </Button>
+                </div>
               </div>
             ) : (
               <Button

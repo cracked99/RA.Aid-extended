@@ -171,6 +171,17 @@ export const ToolExecutionTrajectory: React.FC<ToolExecutionTrajectoryProps> = (
             </div>
           )}
 
+          {/* Display Shell Command Prompt (if not in cowboy mode) */}
+          {(!isError && toolName === 'run_shell_command' && stepData?.prompt && !stepData?.cowboy_mode) && (
+            <div className="mb-4">
+                <h4 className="text-sm font-semibold mb-2">Prompt:</h4>
+                <pre className="text-xs bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-md text-yellow-800 dark:text-yellow-200 overflow-auto">
+                    {stepData.prompt}
+                    {stepData.user_response && `\nUser response: ${stepData.user_response}`}
+                </pre>
+            </div>
+          )}
+
           {/* Display Shell Command Output */}
           {(!isError && toolName === 'run_shell_command' && typeof toolResult?.output === 'string' && toolResult.output.length > 0) && (
             <div className="mb-4">

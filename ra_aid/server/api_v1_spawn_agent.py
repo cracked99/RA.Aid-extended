@@ -3,6 +3,7 @@
 import threading
 import logging
 import json # Added for step_data serialization
+import os
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -23,6 +24,7 @@ from ra_aid.env_inv_context import EnvInvManager
 from ra_aid.env_inv import EnvDiscovery
 from ra_aid.llm import initialize_llm, get_model_default_temperature
 from ra_aid.server.broadcast_sender import send_broadcast
+from ra_aid.server.workspace_utils import reset_workspace
 from ra_aid.utils.agent_thread_manager import agent_thread_registry, has_received_stop_signal, register_agent, \
     unregister_agent
 
@@ -48,6 +50,7 @@ class SpawnAgentRequest(BaseModel):
     Attributes:
         message: The message or task for the agent to process
         research_only: Whether to use research-only mode (default: False)
+        reset_workspace: Whether to reset the workspace before starting the agent (default: False)
     '''
     message: str = Field(
         description="The message or task for the agent to process"
@@ -55,6 +58,10 @@ class SpawnAgentRequest(BaseModel):
     research_only: bool = Field(
         default=False,
         description="Whether to use research-only mode"
+    )
+    reset_workspace: bool = Field(
+        default=False,
+        description="Whether to reset the workspace before starting the agent"
     )
 
 class SpawnAgentResponse(BaseModel):
@@ -248,7 +255,7 @@ def run_agent_thread(
             # Log parameters before calling run_research_agent
             logger.info(f"Starting agent execution for session_id={session_id} with params: "
                         f"base_task_or_query='{message[:50]}...', " # Log first 50 chars
-                        f"expert_enabled={expert_enabled}, research_only={research_only}, " 
+                        f"expert_enabled={expert_enabled}, research_only={research_only}, "
                         f"web_research_enabled={web_research_enabled}, thread_id='{thread_id_str}'")
             run_research_agent(
                 base_task_or_query=message,
@@ -334,12 +341,32 @@ async def spawn_agent(
         if temperature is None:
             temperature = get_model_default_temperature(provider, model_name)
 
+        # Reset workspace if requested
+        if request.reset_workspace:
+            logger.info("Reset workspace requested, cleaning workspace directory")
+            workspace_dir = os.environ.get("PROJECT_STATE_DIR")
+            if workspace_dir:
+                success, message = reset_workspace(workspace_dir)
+                if success:
+                    logger.info(f"Workspace reset successful: {message}")
+                else:
+                    logger.warning(f"Workspace reset failed: {message}")
+            else:
+                logger.warning("Reset workspace requested but PROJECT_STATE_DIR not set")
+
+        # If reset_workspace is true, enable cowboy mode to avoid waiting for user confirmation
+        if request.reset_workspace:
+            config_repo.set("cowboy_mode", True)
+            logger.info("Enabling cowboy mode because reset_workspace is true")
+
         # Create a new session with config values (not request parameters)
         metadata = {
             "agent_type": "research-only" if request.research_only else "research",
             "expert_enabled": expert_enabled,
             "web_research_enabled": web_research_enabled,
-            "status": "pending" # Set initial status
+            "status": "pending", # Set initial status
+            "workspace_reset": request.reset_workspace,  # Store whether workspace was reset
+            "cowboy_mode": request.reset_workspace  # Enable cowboy mode if reset_workspace is true
         }
         session = repo.create_session(metadata=metadata)
         session_id_int = session.id # Store the integer ID
@@ -355,6 +382,7 @@ async def spawn_agent(
             "expert_enabled": expert_enabled,
             "web_research_enabled": web_research_enabled,
             "thread_id": str(session_id_int),
+            "cowboy_mode": request.reset_workspace,  # Enable cowboy mode if reset_workspace is true
         }
 
         # Create stop event for thread termination

@@ -108,8 +108,11 @@ interface SessionActions {
 
   /**
    * Submit a new session message to create a real session via API
+   *
+   * @param researchOnly - Whether to use research-only mode
+   * @param resetWorkspace - Whether to reset the workspace before starting the agent
    */
-  submitNewSession: (researchOnly?: boolean) => Promise<void>;
+  submitNewSession: (researchOnly?: boolean, resetWorkspace?: boolean) => Promise<void>;
 
   /**
    * Update the status of a specific session (e.g., based on WebSocket message)
@@ -275,8 +278,9 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
    * Submit a new session message to create a real session via API
    *
    * @param researchOnly - Whether to use research-only mode
+   * @param resetWorkspace - Whether to reset the workspace before starting the agent
    */
-  submitNewSession: async (researchOnly = false) => {
+  submitNewSession: async (researchOnly = false, resetWorkspace = false) => {
     const currentNewSession = get().newSession;
 
     if (!currentNewSession || currentNewSession.isSubmitting) {
@@ -307,7 +311,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       // Call the spawn agent API
       const data = await spawnAgent({
         message: currentNewSession.message,
-        research_only: researchOnly
+        research_only: researchOnly,
+        reset_workspace: resetWorkspace
       }); // Assuming spawnAgent returns { session_id: number, ... }
 
       // Validate the session_id from the response
