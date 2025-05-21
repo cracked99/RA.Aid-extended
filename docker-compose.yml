@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  ra-aid:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      # Mount the source code for development
+      - ./:/app:Z
+    ports:
+      # Map the server port to host
+      - "1818:1818"
+    environment:
+      # Set environment variables here
+      - PYTHONPATH=/app
+      # Add your API keys here (or use .env file)
+      # - ANTHROPIC_API_KEY=your_api_key
+      # - OPENAI_API_KEY=your_api_key
+    env_file:
+      # Load environment variables from .env file
+      - .env
+    # Keep the container running
+    tty: true
+
+  # Frontend development service (optional)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    volumes:
+      - ./:/app:Z
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_BACKEND_PORT=1818
+    depends_on:
+      - ra-aid
